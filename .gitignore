@@ -1,0 +1,25 @@
+# Dependencias y compilados
+node_modules/
+app/ios/
+app/android/
+app/build/
+app/Payload/
+*.ipa
+xcodebuild.log
+
+# Firmware
+firmware/build/
+firmware/**/version.h
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# Fotos de evidencia (viven en OneDrive, no en el repositorio)
+evidencia/fotos/
+
+# Sistema
+.DS_Store
+Thumbs.db
+.env*.local

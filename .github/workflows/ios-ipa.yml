@@ -1,0 +1,111 @@
+# Compila la app de iOS en una Mac de GitHub, sin firmar, y entrega un .ipa descargable.
+# Sideloadly lo firma e instala desde Windows con una cuenta gratuita de Apple.
+# Con el repositorio público, los minutos de macOS son gratuitos.
+
+name: Compilar IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      variante:
+        description: 'Variante de la app'
+        type: choice
+        options: [entrega, dev]
+        default: entrega
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ios-ipa.yml'
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}-${{ inputs.variante || 'entrega' }}
+  cancel-in-progress: true
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      APP_VARIANT: ${{ inputs.variante || 'entrega' }}
+    defaults:
+      run:
+        working-directory: app
+        shell: bash
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Anotar versiones
+        run: |
+          echo "Variante: $APP_VARIANT"
+          echo "Commit: $(git describe --always --dirty)"
+          xcodebuild -version
+          node --version
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar el proyecto nativo de iOS
+        run: npx expo prebuild -p ios --clean --no-install
+
+      - name: Instalar pods
+        run: cd ios && pod install
+
+      - name: Compilar en Release sin firma
+        run: |
+          WS=$(ls -d ios/*.xcworkspace | head -n 1)
+          SCHEME=$(basename "$WS" .xcworkspace)
+          echo "Workspace: $WS  Esquema: $SCHEME"
+          if ! xcodebuild \
+              -workspace "$WS" \
+              -scheme "$SCHEME" \
+              -configuration Release \
+              -sdk iphoneos \
+              -destination 'generic/platform=iOS' \
+              -derivedDataPath build \
+              CODE_SIGNING_ALLOWED=NO \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGN_IDENTITY="" \
+              build > xcodebuild.log 2>&1; then
+            echo "::error::xcodebuild falló. Primeros errores:"
+            grep -n "error:" xcodebuild.log | head -n 40 || true
+            tail -n 80 xcodebuild.log
+            exit 1
+          fi
+          tail -n 5 xcodebuild.log
+
+      - name: Empaquetar el IPA
+        run: |
+          APP=$(ls -d build/Build/Products/Release-iphoneos/*.app | head -n 1)
+          NOMBRE="vocales-arena-${APP_VARIANT}-$(git describe --always --dirty).ipa"
+          rm -rf Payload && mkdir Payload
+          cp -R "$APP" Payload/
+          zip -qry "$NOMBRE" Payload
+          ls -lh "$NOMBRE"
+          echo "IPA_NOMBRE=$NOMBRE" >> "$GITHUB_ENV"
+
+      - name: Publicar el IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.IPA_NOMBRE }}
+          path: app/${{ env.IPA_NOMBRE }}
+          retention-days: 14
+          if-no-files-found: error
+
+      - name: Guardar el registro de xcodebuild si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: app/xcodebuild.log
+          if-no-files-found: ignore

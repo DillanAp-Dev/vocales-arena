@@ -8,7 +8,7 @@ Una app de iPhone envía la vocal elegida por Bluetooth a un ESP32. El ESP32 gen
 
 | Carpeta | Contenido |
 | --- | --- |
-| `app/` | App de iOS (Expo SDK 54, TypeScript) |
+| `app/` | App de iOS (Expo SDK 54, Expo Router, TypeScript): inicio, explorar, actividad y diagnóstico |
 | `.github/workflows/ios-ipa.yml` | Compila el IPA sin firmar en una Mac de GitHub |
 | `docs/` | Protocolo BLE y documentación |
 | `firmware/` | Firmware del ESP32 (por crear) |
@@ -23,3 +23,7 @@ Una app de iPhone envía la vocal elegida por Bluetooth a un ESP32. El ESP32 gen
 5. Con una cuenta gratuita, la instalación vence a los 7 días: se renueva repitiendo el paso 3 con el mismo `.ipa`.
 
 Para compilar la variante de desarrollo, en **Actions › Compilar IPA › Run workflow** elige `dev`.
+
+## Vista previa sin iPhone ni placa
+
+En `app/`, `npm install` y luego `npx expo start --web`. En el navegador la app usa una placa simulada (`src/placa/transporte.ts`) que responde `LISTO`, `ACTIVA` y `FIN`; en el iPhone se usa Bluetooth real (`src/placa/transporte.native.ts`). Cuando la placa es simulada, el estado lo indica con «(simulada)».

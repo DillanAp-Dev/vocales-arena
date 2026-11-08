@@ -8,7 +8,8 @@ const esDev = variante === 'dev';
 const config: ExpoConfig = {
   name: esDev ? 'Vocales DEV' : 'Vocales en Arena',
   slug: 'vocales-arena',
-  version: '0.1.0',
+  version: '0.2.0',
+  scheme: 'vocalesarena',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
@@ -21,12 +22,13 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: false,
     bundleIdentifier: esDev ? 'com.dillanap.vocalesarena.dev' : 'com.dillanap.vocalesarena',
-    buildNumber: '1',
+    buildNumber: '2',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
     },
   },
   plugins: [
+    'expo-router',
     [
       'react-native-ble-manager',
       {
@@ -35,6 +37,8 @@ const config: ExpoConfig = {
       },
     ],
   ],
+  web: { output: 'single' },
+  experiments: { typedRoutes: false },
   extra: {
     variante,
   },
